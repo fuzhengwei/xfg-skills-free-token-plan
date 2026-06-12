@@ -67,12 +67,25 @@ docker run --name one-api -d --restart always \
 
 ### 添加渠道
 
+**方式一：从注册表添加**（渠道名在注册表中存在时）
+
 ```
 用户：添加 agnes 渠道，key 是 sk-xxx
 → 自动从注册表匹配渠道信息
 → 创建渠道 + auto-model 映射
 → 列出可用模型
 ```
+
+**方式二：自定义参数添加**（用户提供 key/base_url/模型名，不依赖注册表）
+
+```
+用户：把 sk-xxx https://apihub.agnes-ai.com agnes-2.0-flash 配置到渠道里
+→ 调用 add_custom_channel(name, channel_type, api_key, base_url, models_str)
+→ 自动创建 auto-model 映射（如 auto-agnes-2.0-flash → agnes-2.0-flash）
+→ 返回渠道信息 + 可用模型
+```
+
+⚠️ **关键约束**：无论哪种方式添加渠道，**必须自动创建 auto-model 映射**，确保用户可以用 `auto-*` 模型名访问。
 
 查看可用渠道：`有哪些渠道可以用`
 
