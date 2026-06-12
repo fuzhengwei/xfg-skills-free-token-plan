@@ -231,8 +231,8 @@ def _format_distribute(base_url, token, source):
 
     # 生成 curl 验证命令
     test_model = "auto-model" if "auto-model" in auto_models else (regular_models[0] if regular_models else "auto-model")
-    body = json.dumps({"model": test_model, "messages": [{"role": "user", "content": "hello"}], "max_tokens": 20}, ensure_ascii=False)
-    curl_example = f"curl {base_url}/v1/chat/completions \\\n  -H 'Authorization: Bearer {token_key}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{body}'" 
+    body_json = json.dumps({"model": test_model, "messages": [{"role": "user", "content": "1+1"}]}, ensure_ascii=False, indent=2)
+    curl_example = "curl " + base_url + "/v1/chat/completions" + " \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer sk-" + token_key + "\" \\\n  -d '" + body_json.replace("'", "'\\''") + "'" 
 
     return {
         "success": True,
