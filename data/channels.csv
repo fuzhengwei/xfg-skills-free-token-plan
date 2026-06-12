@@ -1,5 +1,5 @@
 name,type,base_url,models,description,api_key_url,doc_url
-agnes,1,https://api.agnes-ai.com,"gpt-4o,gpt-4o-mini",Agnes AI 平台,https://platform.agnes-ai.com/settings/apiKeys,
+agnes,1,https://api.agnes-ai.com,agnes-2.0-flash,Agnes AI 平台,https://platform.agnes-ai.com/settings/apiKeys,
 deepseek,37,https://api.deepseek.com,"deepseek-chat,deepseek-reasoner",DeepSeek 官方,https://platform.deepseek.com/api_keys,https://platform.deepseek.com/docs
 siliconflow,41,https://api.siliconflow.cn,"Qwen/Qwen2.5-72B-Instruct,Qwen/Qwen2.5-7B-Instruct,deepseek-ai/DeepSeek-V3",硅基流动,https://cloud.siliconflow.cn/account/ak,https://docs.siliconflow.cn
 moonshot,31,https://api.moonshot.cn,"moonshot-v1-8k,moonshot-v1-32k,moonshot-v1-128k",Moonshot Kimi,https://platform.moonshot.cn/console/api-keys,https://platform.moonshot.cn/docs
