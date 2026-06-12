@@ -104,19 +104,25 @@ docker run --name one-api -d --restart always \
 ```
 用户：检测渠道
 → 测试所有渠道可用性
+→ 健康渠道：按响应速度自动排优先级
+  - ≤2s  → 优先级 10（极速）
+  - ≤5s  → 优先级 5（快速）
+  - ≤10s → 优先级 1（正常）
+  - >10s → 优先级 0（慢速）
+  - 同档位同优先级 → One API 自动负载均衡
 → 异常渠道：连续失败达阈值(默认2次) → 自动禁用
-→ 已恢复渠道：自动启用 + 还原优先级
-→ 响应慢渠道：降低优先级
-→ 报告状态 + 操作结果
+→ 之前被自动禁用的渠道恢复后 → 重新参与优先级排序
+→ 手动禁用的渠道 → 跳过，不修改
+→ 报告状态 + 优先级分布 + 操作结果
 ```
 
-**自动恢复机制**：渠道被自动禁用后，下次检查通过时自动恢复启用并还原到原始优先级。
+**自动优先级排序**：每次检测后根据响应速度自动排优先级，好用的自动排到前面，同档位的渠道共享优先级，One API 自动负载均衡。
+
+**自动恢复机制**：渠道被自动禁用后，下次检查通过时自动恢复启用并参与优先级排序。
 
 **连续失败阈值**：避免偶发超时误判，默认连续失败 2 次才禁用。
 
-**检查历史持久化**：`data/health_history.json` 记录每个渠道的原始优先级、失败次数、禁用时间，确保重启后仍可恢复。
-
-**定时检测**：自动每 30 分钟执行一次健康检查（通过 OpenClaw cron），无需手动触发。
+**检查历史持久化**：`data/health_history.json` 记录每个渠道的失败次数、禁用时间，重启后仍可恢复。
 
 ### auto-model 统一模型
 
@@ -154,11 +160,10 @@ python3 scripts/channel_manager.py list-registry
 python3 scripts/channel_manager.py add --name agnes --key sk-xxx
 python3 scripts/token_manager.py create --name my-key --unlimited
 python3 scripts/token_manager.py distribute
-python3 scripts/health_checker.py check-all               # 自动修复（默认连续失败2次禁用）
-python3 scripts/health_checker.py check-all --failures 3   # 连续失败3次才禁用
-python3 scripts/health_checker.py check-all --threshold 15  # 响应慢阈值改为15秒
-python3 scripts/health_checker.py history                   # 查看检查历史
-python3 scripts/health_checker.py schedule --interval 30     # 查看定时配置信息
+python3 scripts/health_checker.py check-all               # 检测 + 自动排优先级
+python3 scripts/health_checker.py check-all --no-auto-fix     # 仅检测，不改优先级
+python3 scripts/health_checker.py check-all --failures 3       # 连续失败3次才禁用
+python3 scripts/health_checker.py history                     # 查看检查历史
 python3 scripts/auto_model.py list
 ```
 
@@ -174,10 +179,12 @@ python3 scripts/auto_model.py list
 1. **service_config.json 含密码**，不要在日志/对话中泄露
 2. **API Key 创建后仅返回一次**，必须及时保存
 3. **auto-model 映射在添加渠道时自动创建**，手动修改渠道后需重新同步
-4. **健康检查已自动注册 cron**，每30分钟检测一次，无需手动配置
+4. **健康检查由用户手动触发**（检测渠道），每次检测自动排优先级
 5. **One API 默认 root 密码 123456**，生产环境务必修改
-6. **检查历史持久化**：`data/health_history.json` 记录禁用渠道的原始优先级，恢复时自动还原
-7. **连续失败阈值**：默认2次，避免偶发超时误判，可通过 `--failures` 调整
+6. **优先级自动排序**：检测时按响应速度分4档（极速/快速/正常/慢速），同档同优先级负载均衡
+7. **检查历史持久化**：`data/health_history.json` 记录失败次数，重启后仍可恢复
+8. **连续失败阈值**：默认2次，避免偶发超时误判，可通过 `--failures` 调整
+9. **手动禁用(状态2)的渠道不会被检测或修改**，仅自动禁用(状态3)的渠道参与恢复
 6. **渠道注册表是社区共享的**，提交 PR 即可添加新渠道
 7. **MySQL 需要开放端口**供 One API 连接，注意防火墙规则
 
