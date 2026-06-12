@@ -81,7 +81,7 @@ docker run --name one-api -d --restart always \
 ```
 用户：把 sk-xxx https://apihub.agnes-ai.com agnes-2.0-flash 配置到渠道里
 → 调用 add_custom_channel(name, channel_type, api_key, base_url, models_str)
-→ 自动创建 auto-model 映射（如 auto-agnes-2.0-flash → agnes-2.0-flash）
+→ 自动创建 auto-model 映射（如 auto-model → agnes-2.0-flash）
 → 返回渠道信息 + 可用模型
 ```
 
@@ -109,11 +109,13 @@ docker run --name one-api -d --restart always \
 
 ### auto-model 统一模型
 
-每个渠道的每个模型自动映射为 `auto-{model}`：
-- `gpt-4o` → `auto-gpt-4o`
-- `deepseek-chat` → `auto-deepseek-chat`
+每个渠道添加时自动将真实模型映射为固定名称 `auto-model`：
+- 渠道有 `agnes-2.0-flash` → 映射 `auto-model → agnes-2.0-flash`
+- 渠道有 `deepseek-chat` → 映射 `auto-model → deepseek-chat`
 
-使用 `auto-*` 模型时，One API 自动路由到可用渠道，无需关心底层。
+用户在 AI 工具中统一使用 `auto-model` 作为模型名，换渠道只需改映射，不用改工具配置。
+
+多渠道同模型时，One API 自动负载均衡到可用渠道。
 
 ## 模块路由
 

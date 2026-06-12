@@ -117,8 +117,15 @@ def _build_auto_model_mapping(models_list):
     """
     为模型列表自动构建 auto-model 映射
     
+    将每个原始模型映射为固定名称 "auto-model"，
+    这样用户在 AI 工具中统一使用 "auto-model" 作为模型名，
+    One API 通过 model_mapping 路由到渠道的真实模型。
+    换渠道只需改映射，不用改工具配置。
+    
+    例如：渠道有 agnes-2.0-flash → 映射 auto-model → agnes-2.0-flash
+    
     Args:
-        models_list: 原始模型名称列表（可能已含 auto- 前缀）
+        models_list: 原始模型名称列表
     
     Returns:
         tuple: (all_models_str, model_mapping_dict, auto_models_list)
@@ -135,17 +142,20 @@ def _build_auto_model_mapping(models_list):
         seen.add(model)
         all_models.append(model)
 
-        # 跳过已有的 auto-model，避免递归
-        if model.startswith("auto-"):
+        # 跳过 auto-model 自身，避免递归
+        if model == "auto-model":
             continue
 
-        auto_model = f"auto-{model}"
-        # auto-model 也不重复
-        if auto_model not in seen:
-            seen.add(auto_model)
-            all_models.append(auto_model)
-            model_mapping[auto_model] = model
-            auto_models.append(auto_model)
+    # 将第一个模型映射为 auto-model（主模型）
+    # 所有模型也各自映射为 auto-model（优先级：后添加的覆盖，即最后一个模型生效）
+    if models_list:
+        if "auto-model" not in seen:
+            all_models.append("auto-model")
+        # 每个模型都映射到 auto-model，最后添加的优先级最高
+        for model in models_list:
+            if model != "auto-model":
+                model_mapping["auto-model"] = model
+        auto_models = ["auto-model"]
 
     return ",".join(all_models), model_mapping, auto_models
 

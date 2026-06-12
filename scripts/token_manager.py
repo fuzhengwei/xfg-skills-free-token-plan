@@ -33,7 +33,7 @@ def _get_all_model_scope():
     """
     获取当前所有可用模型范围（原始模型 + auto-model）
     
-    确保令牌能访问所有 auto-* 模型，同时保留原始模型名。
+    确保令牌能访问 auto-model 固定名称，同时保留原始模型名。
     
     Returns:
         str: 逗号分隔的模型列表
@@ -46,9 +46,9 @@ def _get_all_model_scope():
     if not available:
         return ""
 
-    # 去重并排序，auto-model 排前面
+    # 去重，auto-model 排前面
     model_set = set(available)
-    sorted_models = sorted(model_set, key=lambda m: (0 if m.startswith("auto-") else 1, m))
+    sorted_models = sorted(model_set, key=lambda m: (0 if m == "auto-model" else 1, m))
     return ",".join(sorted_models)
 
 
