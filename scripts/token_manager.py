@@ -222,12 +222,17 @@ def _format_distribute(base_url, token, source):
         available_models = models_result.get("data", []) or []
 
     # 区分 auto 模型和普通模型
-    auto_models = [m for m in available_models if m.startswith("auto-")]
-    regular_models = [m for m in available_models if not m.startswith("auto-")]
+    auto_models = [m for m in available_models if m == "auto-model" or m.startswith("auto-")]
+    regular_models = [m for m in available_models if m not in auto_models]
 
     token_key = token.get("key", "")
     if not token_key and source == "created":
         token_key = "(创建成功，但 Key 未返回，请从 list 命令查看)"
+
+    # 生成 curl 验证命令
+    test_model = "auto-model" if "auto-model" in auto_models else (regular_models[0] if regular_models else "auto-model")
+    body = json.dumps({"model": test_model, "messages": [{"role": "user", "content": "hello"}], "max_tokens": 20}, ensure_ascii=False)
+    curl_example = f"curl {base_url}/v1/chat/completions \\\n  -H 'Authorization: Bearer {token_key}' \\\n  -H 'Content-Type: application/json' \\\n  -d '{body}'" 
 
     return {
         "success": True,
@@ -245,7 +250,8 @@ def _format_distribute(base_url, token, source):
             "available_models": available_models,
             "auto_models": auto_models,
             "regular_models": regular_models,
-            "usage_hint": f"将 api_key 填入你的 AI 工具，base_url 设为 {base_url}，即可使用 auto-* 模型自动路由"
+            "curl_example": curl_example,
+            "usage_hint": f"将 api_key 填入你的 AI 工具，base_url 设为 {base_url}，模型名用 {test_model}"
         }
     }
 
