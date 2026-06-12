@@ -1,0 +1,9 @@
+name,type,base_url,models,description,api_key_url,doc_url
+agnes,1,https://api.agnes-ai.com,"gpt-4o,gpt-4o-mini",Agnes AI 平台,https://platform.agnes-ai.com/settings/apiKeys,
+deepseek,37,https://api.deepseek.com,"deepseek-chat,deepseek-reasoner",DeepSeek 官方,https://platform.deepseek.com/api_keys,https://platform.deepseek.com/docs
+siliconflow,41,https://api.siliconflow.cn,"Qwen/Qwen2.5-72B-Instruct,Qwen/Qwen2.5-7B-Instruct,deepseek-ai/DeepSeek-V3",硅基流动,https://cloud.siliconflow.cn/account/ak,https://docs.siliconflow.cn
+moonshot,31,https://api.moonshot.cn,"moonshot-v1-8k,moonshot-v1-32k,moonshot-v1-128k",Moonshot Kimi,https://platform.moonshot.cn/console/api-keys,https://platform.moonshot.cn/docs
+zhipu,15,https://open.bigmodel.cn,"glm-4-plus,glm-4-flash,glm-4-long",智谱AI,https://open.bigmodel.cn/usercenter/apikeys,https://open.bigmodel.cn/dev/api
+ali,16,https://dashscope.aliyuncs.com,"qwen-plus,qwen-turbo,qwen-max",阿里通义千问,https://dashscope.console.aliyun.com/apiKey,https://help.aliyun.com/zh/dashscope
+tencent,19,https://hunyuan.tencentcloudapi.com,"hunyuan-lite,hunyuan-standard,hunyuan-pro",腾讯混元,https://console.cloud.tencent.com/cam/capi,https://cloud.tencent.com/document/product/1729
+minimax,34,https://api.minimax.chat,"MiniMax-Text-01,abab6.5s-chat",MiniMax,https://www.minimaxi.com/user-center/basic-information,https://www.minimaxi.com/document

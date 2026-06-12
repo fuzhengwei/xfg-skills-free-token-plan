@@ -1,0 +1,10 @@
+# one-api 源码不提交
+one-api/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 系统文件
+.DS_Store
