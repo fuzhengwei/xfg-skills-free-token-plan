@@ -1,6 +1,9 @@
 # one-api 源码不提交
 one-api/
 
+# 本地敏感配置（含密码/token，不提交）
+data/service_config.json
+
 # Python
 __pycache__/
 *.pyc
