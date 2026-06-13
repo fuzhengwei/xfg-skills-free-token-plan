@@ -13,6 +13,49 @@
 | 🔗 **服务连接** | 配置 One API 服务地址和账户，支持自部署 | 配置one-api、连接服务、部署one-api |
 | ❓ **帮助** | 输出完整功能说明 | help、帮助、能做什么 |
 
+## 安装
+
+### 方式一：在线安装（推荐）
+
+在 OpenClaw 对话中直接说：
+
+> 安装 xfg-skills-free-token-plan
+
+或通过 SkillHub CLI：
+
+```bash
+skillhub install xfg-skills-free-token-plan
+```
+
+安装完成后 Skill 自动生效，对话中输入触发词即可使用。
+
+### 方式二：从 GitHub 安装
+
+```bash
+# 克隆仓库到本地 Skills 目录
+git clone git@github.com:fuzhengwei/xfg-skills-free-token-plan.git ~/.qclaw/skills/xfg-skills-free-token-plan
+```
+
+克隆后重启 OpenClaw 即可生效。
+
+### 方式三：手动安装
+
+1. 下载本仓库 ZIP 包或克隆到本地
+2. 将 `xfg-skills-free-token-plan` 目录复制到 OpenClaw Skills 目录：
+   - macOS/Linux：`~/.qclaw/skills/`
+   - Windows：`%USERPROFILE%\.qclaw\skills\`
+3. 重启 OpenClaw
+
+### 依赖
+
+- **Python 3**：Skill 脚本使用 Python 3 运行，需确保 `python3` 可用
+- **One API 服务**：需要一个运行中的 One API 实例（见下方「部署 One API」）
+- **Docker**（可选）：用于自部署 One API + MySQL
+
+### 验证安装
+
+安装后对 AI 说「帮助」或「能做什么」，如果返回 Free Token Plan 的功能列表，说明安装成功。
+
 ## 快速开始
 
 ### 1. 部署 One API（首次使用）
