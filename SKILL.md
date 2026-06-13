@@ -79,24 +79,48 @@ Skill 激活时自动检测 One API 配置：
 ### 自部署 One API
 
 ```bash
-# 1. 部署 MySQL
-docker run --name oneapi-mysql -d --restart always \
-  -p 13306:3306 \
-  -e MYSQL_ROOT_PASSWORD=123456 \
-  -e MYSQL_DATABASE=oneapi \
-  -v /home/ubuntu/data/mysql:/var/lib/mysql \
-  registry.cn-hangzhou.aliyuncs.com/xfg-studio/mysql:8.0
+# 使用 docker-compose 一键部署（推荐）
+# 将下方内容保存为 docker-compose.yml 后运行: docker-compose up -d
+version: '3'
+services:
+  mysql:
+    image: registry.cn-hangzhou.aliyuncs.com/xfg-studio/mysql:8.0
+    container_name: oneapi-mysql
+    restart: always
+    ports:
+      - "13306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345678
+      MYSQL_DATABASE: oneapi
+    volumes:
+      - /home/ubuntu/data/mysql:/var/lib/mysql
+    networks:
+      - oneapi-net
 
-# 2. 部署 One API
-docker run --name one-api -d --restart always \
-  -p 4000:3000 \
-  -e SQL_DSN="root:123456@tcp(你的服务器IP:13306)/oneapi" \
-  -e TZ=Asia/Shanghai \
-  -v /home/ubuntu/data/one-api:/data \
-  registry.cn-hangzhou.aliyuncs.com/xfg-studio/one-api:v0.6.10
+  one-api:
+    image: registry.cn-hangzhou.aliyuncs.com/xfg-studio/one-api:v0.6.11
+    container_name: one-api
+    restart: always
+    ports:
+      - "4000:3000"
+    environment:
+      SQL_DSN: "root:12345678@tcp(mysql:3306)/oneapi"
+      TZ: Asia/Shanghai
+    volumes:
+      - /home/ubuntu/data/one-api:/data
+    depends_on:
+      - mysql
+    networks:
+      - oneapi-net
+
+networks:
+  oneapi-net:
+    driver: bridge
 ```
 
 部署后在 Web 面板 `http://你的IP:4000` 用 root/12345678 登录。
+
+> **提示**: 同一 docker-compose 下的容器通过 `mysql:3306` 内网通信，无需配置服务器 IP。`13306` 端口映射仅用于外部调试。
 
 ### 连接已有服务
 

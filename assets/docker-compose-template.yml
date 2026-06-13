@@ -7,21 +7,29 @@ services:
     ports:
       - "13306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: 12345678
       MYSQL_DATABASE: oneapi
     volumes:
       - /home/ubuntu/data/mysql:/var/lib/mysql
+    networks:
+      - oneapi-net
 
   one-api:
-    image: registry.cn-hangzhou.aliyuncs.com/xfg-studio/one-api:v0.6.10
+    image: registry.cn-hangzhou.aliyuncs.com/xfg-studio/one-api:v0.6.11
     container_name: one-api
     restart: always
     ports:
       - "4000:3000"
     environment:
-      SQL_DSN: "root:123456@tcp(YOUR_SERVER_IP:13306)/oneapi"
+      SQL_DSN: "root:12345678@tcp(mysql:3306)/oneapi"
       TZ: Asia/Shanghai
     volumes:
       - /home/ubuntu/data/one-api:/data
     depends_on:
       - mysql
+    networks:
+      - oneapi-net
+
+networks:
+  oneapi-net:
+    driver: bridge
