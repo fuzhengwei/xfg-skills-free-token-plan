@@ -6,7 +6,7 @@
 
 | 功能 | 说明 | 触发词 |
 |------|------|--------|
-| 🔑 **Key 分发** | 自动创建 API Key，返回地址 + Key + 可用模型 | 给我来个key、apikey、来点额度、给我个令牌 |
+| 🔑 **Key 分发** | 自动创建 API Key，返回地址 + Key + 可用模型 | 给我来个key、给爷来个key、apikey、来点额度、给我个令牌 |
 | 📡 **渠道管理** | 一键添加渠道 + auto-model 映射，换渠道不改配置 | 添加渠道、渠道列表、有哪些渠道 |
 | ✅ **渠道验证** | 验证渠道可用性，不可用自动降级，可用自动恢复 | 检查渠道、测试渠道、验证渠道 |
 | 🤖 **可用模型** | 列出当前所有可用模型 | 可用模型、模型列表 |
@@ -57,7 +57,7 @@ git clone git@github.com:fuzhengwei/xfg-skills-free-token-plan.git ~/.qclaw/skil
 ```
 
 ```
-给我来个 key
+给我来个 key / 给爷来个 key
 ```
 
 ### 场景二：添加多个渠道
@@ -106,7 +106,7 @@ git clone git@github.com:fuzhengwei/xfg-skills-free-token-plan.git ~/.qclaw/skil
 ### 场景五：获取 API Key 给别人用
 
 ```
-给我来个 key
+给我来个 key / 给爷来个 key
 ```
 
 返回：
@@ -220,7 +220,7 @@ networks:
 ### 4. 获取 API Key
 
 ```
-给我来个 key
+给我来个 key / 给爷来个 key
 ```
 
 ### 5. 验证渠道
