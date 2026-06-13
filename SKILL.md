@@ -2,7 +2,7 @@
 name: xfg-skills-free-token-plan
 description: |
   Free Token Plan — 基于 One API 的 AI 模型 API 自动化管理技能。
-  触发词：给我来个key、apikey、给我点粮食、来点额度、给我个令牌、
+  触发词：给我来个key、给爷来个key、apikey、给我点粮食、来点额度、给我个令牌、
   配置one-api、添加服务、连接服务、部署one-api、自部署、
   添加渠道、渠道列表、有哪些渠道、可用渠道、
   检测渠道、测试渠道、验证渠道、健康检查、渠道状态、
@@ -32,7 +32,7 @@ metadata:
 **🛠 Free Token Plan — 你可以让我做这些事：**
 
 **1️⃣ 获取 API Key**
-> 「给我来个 key」「apikey」「来点额度」「给我个令牌」
+> 「给我来个 key」「给爷来个 key」「apikey」「来点额度」「给我个令牌」
 > 自动创建或复用 API Key，返回地址 + Key + 可用模型，直接可用。
 
 **2️⃣ 添加渠道**
@@ -155,12 +155,12 @@ networks:
 ### 获取 API Key
 
 ```
-用户：给我来个 key
+用户：给我来个 key / 给爷来个 key
 → 列出现有有效令牌 or 创建新令牌
 → 返回：地址 + API Key + 可用模型
 ```
 
-触发词：给我来个key、apikey、给我点粮食、来点额度、给我个令牌
+触发词：给我来个key、给爷来个key、apikey、给我点粮食、来点额度、给我个令牌
 
 ### 渠道验证
 
