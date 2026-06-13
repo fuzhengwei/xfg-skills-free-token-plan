@@ -15,32 +15,18 @@
 
 ## 安装
 
-### 方式一：在线安装（推荐）
-
-在 OpenClaw 对话中直接说：
-
-> 安装 xfg-skills-free-token-plan
-
-或通过 SkillHub CLI：
+### 方式一：从 GitHub 克隆（推荐）
 
 ```bash
-skillhub install xfg-skills-free-token-plan
-```
-
-安装完成后 Skill 自动生效，对话中输入触发词即可使用。
-
-### 方式二：从 GitHub 安装
-
-```bash
-# 克隆仓库到本地 Skills 目录
+# 克隆仓库到 OpenClaw Skills 目录
 git clone git@github.com:fuzhengwei/xfg-skills-free-token-plan.git ~/.qclaw/skills/xfg-skills-free-token-plan
 ```
 
-克隆后重启 OpenClaw 即可生效。
+克隆后重启 OpenClaw 即可生效，对话中输入触发词即可使用。
 
-### 方式三：手动安装
+### 方式二：手动安装
 
-1. 下载本仓库 ZIP 包或克隆到本地
+1. 下载本仓库 [ZIP 包](https://github.com/fuzhengwei/xfg-skills-free-token-plan/archive/refs/heads/main.zip) 或克隆到本地
 2. 将 `xfg-skills-free-token-plan` 目录复制到 OpenClaw Skills 目录：
    - macOS/Linux：`~/.qclaw/skills/`
    - Windows：`%USERPROFILE%\.qclaw\skills\`
