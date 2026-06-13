@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-health_checker.py — 渠道健康检查 + 自动优先级排序
-==================================================
-用户手动触发，检测所有渠道状态，自动排优先级：
-- 健康渠道：按响应速度分档，快的优先级高，同档同优先级（负载均衡）
-- 异常渠道：自动禁用
-- 之前被自动禁用的渠道恢复后：重新参与优先级排序
+health_checker.py — 渠道验证 + 自动降级/恢复
+=============================================
+用户手动触发（检查渠道/测试渠道/验证渠道），检测所有渠道状态：
+- 所有渠道默认优先级 10（统一负载均衡）
+- 不可用渠道 → 降级为优先级 1（降级，不删除）
+- 下次验证可用后 → 恢复优先级 10
+- 手动禁用(状态2)的渠道 → 跳过，不修改
 
 检查历史文件: data/health_history.json
 """
@@ -32,48 +33,15 @@ from oneapi_client import (
 CHANNEL_STATUS = {0: "未知", 1: "启用", 2: "手动禁用", 3: "自动禁用"}
 TOKEN_STATUS = {1: "已启用", 2: "已禁用", 3: "已过期", 4: "已耗尽"}
 
-# ── 优先级分档阈值（秒）──────────────────────────────────
-# 响应时间 <= 2s  → 优先级 10（极速）
-# 响应时间 <= 5s  → 优先级 5 （快速）
-# 响应时间 <= 10s → 优先级 1 （正常）
-# 响应时间 > 10s  → 优先级 0 （慢速）
-PRIORITY_TIERS = [
-    (2, 10),    # 极速
-    (5, 5),     # 快速
-    (10, 1),    # 正常
-]
-
-DEFAULT_FAILURE_THRESHOLD = 2  # 连续失败 N 次才禁用
+# ── 优先级常量 ────────────────────────────────────────────
+PRIORITY_NORMAL = 10    # 正常优先级（统一负载均衡）
+PRIORITY_DEGRADED = 1   # 降级优先级（不可用渠道）
 
 
 def _now_iso():
     """当前时间 ISO 格式（东八区）"""
     tz = timezone(timedelta(hours=8))
     return datetime.now(tz).isoformat()
-
-
-def _calc_priority(response_time):
-    """
-    根据响应时间计算优先级
-    
-    同档位内的渠道优先级相同 → One API 自动负载均衡
-    
-    Args:
-        response_time: 响应时间（秒）
-    
-    Returns:
-        int: 优先级
-    """
-    for threshold, priority in PRIORITY_TIERS:
-        if response_time <= threshold:
-            return priority
-    return 0  # 慢速
-
-
-def _tier_label(priority):
-    """优先级对应的档位标签"""
-    labels = {10: "极速", 5: "快速", 1: "正常", 0: "慢速"}
-    return labels.get(priority, f"P{priority}")
 
 
 def _load_history():
@@ -99,9 +67,8 @@ def _get_channel_history(history, channel_id):
     ch_key = str(channel_id)
     if ch_key not in history["channels"]:
         history["channels"][ch_key] = {
-            "original_priority": None,
             "consecutive_failures": 0,
-            "disabled_at": None,
+            "degraded_at": None,
             "last_check": None,
             "last_healthy": None
         }
@@ -146,23 +113,21 @@ def check_channel_health(channel_id, model=None):
     }
 
 
-def check_all_channels(auto_fix=True, failure_threshold=DEFAULT_FAILURE_THRESHOLD):
+def check_all_channels(auto_fix=True):
     """
-    检测所有渠道 + 自动排优先级
+    验证所有渠道 + 自动降级/恢复
 
-    流程:
-    1. 测试所有渠道
-    2. 健康渠道：按响应速度自动排优先级（同档同优先级 → 负载均衡）
-    3. 异常渠道：连续失败达阈值 → 自动禁用
-    4. 之前自动禁用的渠道恢复后：重新参与优先级排序
-    5. 手动禁用(状态2)的渠道：跳过，不动
+    逻辑:
+    - 所有渠道默认优先级 10（统一负载均衡）
+    - 不可用渠道 → 降级为优先级 1（仍保留，低优先级）
+    - 下次验证可用后 → 恢复优先级 10
+    - 手动禁用(状态2)的渠道 → 跳过，不修改
 
     Args:
-        auto_fix: 是否自动修复（排优先级 + 禁用异常渠道）
-        failure_threshold: 连续失败多少次才自动禁用
+        auto_fix: 是否自动修复（降级/恢复优先级）
 
     Returns:
-        dict: 健康报告
+        dict: 验证报告
     """
     channels_result = list_channels(page=0, page_size=100)
     if not channels_result.get("success"):
@@ -171,12 +136,12 @@ def check_all_channels(auto_fix=True, failure_threshold=DEFAULT_FAILURE_THRESHOL
     channels = channels_result.get("data", []) or []
     history = _load_history()
 
-    # ── 第一轮：测试所有渠道 ─────────────────────────────
+    # ── 测试所有渠道 ─────────────────────────────────────
     health_results = []
-    healthy_channels = []  # (channel_info, health_result)
-    unhealthy_count = 0
+    healthy_channels = []
+    unhealthy_channels = []
+    degraded_count = 0
     recovered_count = 0
-    auto_disabled_count = 0
     skipped_manual = 0
 
     for ch in channels:
@@ -195,7 +160,8 @@ def check_all_channels(auto_fix=True, failure_threshold=DEFAULT_FAILURE_THRESHOL
                 "healthy": None,
                 "action": "skipped (手动禁用)",
                 "status": 2,
-                "status_text": "手动禁用"
+                "status_text": "手动禁用",
+                "priority": ch.get("priority", 0)
             })
             continue
 
@@ -206,57 +172,62 @@ def check_all_channels(auto_fix=True, failure_threshold=DEFAULT_FAILURE_THRESHOL
         if health.get("healthy"):
             ch_history["consecutive_failures"] = 0
             ch_history["last_healthy"] = True
-
-            # 之前被自动禁用 → 标记恢复
-            if ch.get("status") == 3 and ch_history.get("disabled_at"):
-                recovered_count += 1
-                ch_history["disabled_at"] = None
-                health["recovered"] = True
-
             healthy_channels.append((ch, health))
         else:
-            unhealthy_count += 1
             ch_history["consecutive_failures"] = ch_history.get("consecutive_failures", 0) + 1
             ch_history["last_healthy"] = False
-
-            if auto_fix and ch.get("status") == 1:
-                failures = ch_history["consecutive_failures"]
-                if failures >= failure_threshold:
-                    ch_history["original_priority"] = ch.get("priority", 0)
-                    _disable_channel(ch)
-                    ch_history["disabled_at"] = _now_iso()
-                    auto_disabled_count += 1
-                    health["action"] = f"auto_disabled (连续失败{failures}次)"
-                else:
-                    health["action"] = f"failure_recorded ({failures}/{failure_threshold})"
+            unhealthy_channels.append((ch, health))
 
         health_results.append(health)
 
-    # ── 第二轮：健康渠道自动排优先级 ──────────────────────
-    priority_updates = []
-    if auto_fix and healthy_channels:
+    # ── 自动修复：降级/恢复 ──────────────────────────────
+    actions = []
+
+    if auto_fix:
+        # 不可用渠道 → 降级为优先级 1
+        for ch, health in unhealthy_channels:
+            current_priority = ch.get("priority", 0)
+            if current_priority != PRIORITY_DEGRADED:
+                update_data = {
+                    "id": ch.get("id"),
+                    "priority": PRIORITY_DEGRADED
+                }
+                update_channel(update_data)
+                ch_history = _get_channel_history(history, ch.get("id"))
+                ch_history["degraded_at"] = _now_iso()
+                degraded_count += 1
+                health["old_priority"] = current_priority
+                health["new_priority"] = PRIORITY_DEGRADED
+                health["action"] = "degraded"
+                actions.append(f"🔻 {ch.get('name', '')}: 优先级 {current_priority} → {PRIORITY_DEGRADED}（降级）")
+            else:
+                health["action"] = "already_degraded"
+
+        # 可用渠道 → 恢复优先级 10
         for ch, health in healthy_channels:
-            response_time = health.get("response_time", 999)
-            new_priority = _calc_priority(response_time)
-            old_priority = ch.get("priority", 0)
+            current_priority = ch.get("priority", 0)
+            ch_history = _get_channel_history(history, ch.get("id"))
 
-            # 需要更新：恢复的渠道 或 优先级变化的渠道
-            need_update = health.get("recovered", False) or old_priority != new_priority
+            # 之前被降级的渠道，现在恢复了
+            was_degraded = ch_history.get("degraded_at") or current_priority != PRIORITY_NORMAL
 
-            if need_update:
+            if current_priority != PRIORITY_NORMAL:
                 update_data = {
                     "id": ch.get("id"),
                     "status": 1,  # 确保启用
-                    "priority": new_priority
+                    "priority": PRIORITY_NORMAL
                 }
                 update_channel(update_data)
-                health["old_priority"] = old_priority
-                health["new_priority"] = new_priority
-                health["priority_tier"] = _tier_label(new_priority)
-                health["action"] = "recovered + priority_set" if health.get("recovered") else "priority_adjusted"
-                priority_updates.append(health)
+                ch_history["degraded_at"] = None
+                recovered_count += 1
+                health["old_priority"] = current_priority
+                health["new_priority"] = PRIORITY_NORMAL
+                health["action"] = "recovered"
+                health["recovered"] = True
+                actions.append(f"🔺 {ch.get('name', '')}: 优先级 {current_priority} → {PRIORITY_NORMAL}（恢复）")
             else:
-                health["priority_tier"] = _tier_label(new_priority)
+                health["action"] = "healthy"
+                ch_history["degraded_at"] = None
 
     # ── 更新历史 ─────────────────────────────────────────
     history["last_full_check"] = _now_iso()
@@ -264,43 +235,29 @@ def check_all_channels(auto_fix=True, failure_threshold=DEFAULT_FAILURE_THRESHOL
     _save_history(history)
 
     # ── 构建报告 ─────────────────────────────────────────
-    # 按优先级分组展示
-    priority_groups = {}
-    for ch, health in healthy_channels:
-        p = health.get("new_priority", health.get("priority", 0))
-        tier = health.get("priority_tier", _tier_label(p))
-        if tier not in priority_groups:
-            priority_groups[tier] = []
-        priority_groups[tier].append({
-            "id": ch.get("id"),
-            "name": ch.get("name", ""),
-            "response_time": health.get("response_time", 0),
-            "priority": p
-        })
-
-    parts = [f"{len(healthy_channels)} 正常", f"{unhealthy_count} 异常"]
-    if auto_disabled_count > 0:
-        parts.append(f"{auto_disabled_count} 已自动禁用")
+    parts = [f"✅ {len(healthy_channels)} 正常（优先级{PRIORITY_NORMAL}）", f"❌ {len(unhealthy_channels)} 不可用"]
+    if degraded_count > 0:
+        parts.append(f"🔻 {degraded_count} 已降级（优先级→{PRIORITY_DEGRADED}）")
     if recovered_count > 0:
-        parts.append(f"{recovered_count} 已自动恢复")
+        parts.append(f"🔺 {recovered_count} 已恢复（优先级→{PRIORITY_NORMAL}）")
     if skipped_manual > 0:
-        parts.append(f"{skipped_manual} 手动禁用(跳过)")
+        parts.append(f"⏭ {skipped_manual} 手动禁用(跳过)")
 
     return {
         "success": True,
         "data": {
             "total": len(health_results),
             "healthy": len(healthy_channels),
-            "unhealthy": unhealthy_count,
-            "auto_disabled": auto_disabled_count,
+            "unhealthy": len(unhealthy_channels),
+            "degraded": degraded_count,
             "recovered": recovered_count,
-            "failure_threshold": failure_threshold,
-            "priority_groups": priority_groups,
-            "priority_updates": priority_updates,
+            "priority_normal": PRIORITY_NORMAL,
+            "priority_degraded": PRIORITY_DEGRADED,
+            "actions": actions,
             "channels": health_results
         },
-        "message": f"渠道检测完成: " + ", ".join(parts) +
-                   (f"\n优先级已自动排序，同档位渠道负载均衡" if priority_updates else "")
+        "message": "渠道验证完成: " + ", ".join(parts) +
+                   ("\n\n" + "\n".join(actions) if actions else "")
     }
 
 
@@ -374,7 +331,7 @@ def get_channel_stats():
     channels = channels_result.get("data", []) or []
 
     by_status = {1: 0, 2: 0, 3: 0}
-    by_type = {}
+    by_priority = {}
     total_used_quota = 0
 
     for ch in channels:
@@ -382,8 +339,8 @@ def get_channel_stats():
         if status in by_status:
             by_status[status] += 1
 
-        ch_type = ch.get("type", 0)
-        by_type[ch_type] = by_type.get(ch_type, 0) + 1
+        priority = ch.get("priority", 0)
+        by_priority[priority] = by_priority.get(priority, 0) + 1
 
         total_used_quota += ch.get("used_quota", 0)
 
@@ -394,7 +351,7 @@ def get_channel_stats():
             "enabled": by_status.get(1, 0),
             "manually_disabled": by_status.get(2, 0),
             "auto_disabled": by_status.get(3, 0),
-            "by_type": by_type,
+            "by_priority": by_priority,
             "total_used_quota": total_used_quota
         }
     }
@@ -405,13 +362,12 @@ def get_health_history():
     history = _load_history()
     channels = history.get("channels", {})
 
-    auto_disabled = []
+    degraded_channels = []
     for ch_id, ch_data in channels.items():
-        if ch_data.get("disabled_at"):
-            auto_disabled.append({
+        if ch_data.get("degraded_at"):
+            degraded_channels.append({
                 "channel_id": int(ch_id),
-                "original_priority": ch_data.get("original_priority", 0),
-                "disabled_at": ch_data.get("disabled_at"),
+                "degraded_at": ch_data.get("degraded_at"),
                 "consecutive_failures": ch_data.get("consecutive_failures", 0)
             })
 
@@ -420,10 +376,10 @@ def get_health_history():
         "data": {
             "last_full_check": history.get("last_full_check"),
             "total_checks": history.get("check_count", 0),
-            "auto_disabled_channels": auto_disabled
+            "degraded_channels": degraded_channels
         },
         "message": f"历史: {history.get('check_count', 0)} 次检查, "
-                   f"{len(auto_disabled)} 个渠道待恢复"
+                   f"{len(degraded_channels)} 个渠道待恢复"
     }
 
 
@@ -434,21 +390,10 @@ def clear_history():
     return {"success": True, "message": "检查历史已清除"}
 
 
-# ── 内部操作函数 ──────────────────────────────────────────
-
-def _disable_channel(channel):
-    """自动禁用渠道（状态=3）"""
-    update_data = {
-        "id": channel.get("id"),
-        "status": 3
-    }
-    update_channel(update_data)
-
-
 # ── CLI 入口 ──────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="渠道健康检查 + 自动优先级排序")
+    parser = argparse.ArgumentParser(description="渠道验证 + 自动降级/恢复")
     sub = parser.add_subparsers(dest="command")
 
     # check-channel
@@ -457,10 +402,8 @@ def main():
     p_cc.add_argument("--model", default=None)
 
     # check-all
-    p_ca = sub.add_parser("check-all", help="检测所有渠道 + 自动排优先级")
-    p_ca.add_argument("--no-auto-fix", action="store_true", help="不自动修复（仅报告）")
-    p_ca.add_argument("--failures", type=int, default=DEFAULT_FAILURE_THRESHOLD,
-                       help="连续失败多少次才自动禁用(默认2)")
+    p_ca = sub.add_parser("check-all", help="验证所有渠道 + 自动降级/恢复")
+    p_ca.add_argument("--no-auto-fix", action="store_true", help="仅报告，不自动降级/恢复")
 
     # check-tokens
     p_ct = sub.add_parser("check-tokens", help="检测令牌状态")
@@ -487,10 +430,7 @@ def main():
     if args.command == "check-channel":
         result = check_channel_health(args.id, args.model)
     elif args.command == "check-all":
-        result = check_all_channels(
-            auto_fix=not args.no_auto_fix,
-            failure_threshold=args.failures
-        )
+        result = check_all_channels(auto_fix=not args.no_auto_fix)
     elif args.command == "check-tokens":
         result = check_token_status(args.id)
     elif args.command == "check-quota":

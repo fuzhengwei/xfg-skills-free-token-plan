@@ -160,7 +160,7 @@ def _build_auto_model_mapping(models_list):
     return ",".join(all_models), model_mapping, auto_models
 
 
-def add_to_oneapi(channel_name, api_key, priority=0, group="default"):
+def add_to_oneapi(channel_name, api_key, priority=10, group="default"):
     """
     将注册表中的渠道添加到 One API，自动添加 auto-model 映射
     
@@ -224,7 +224,7 @@ def add_to_oneapi(channel_name, api_key, priority=0, group="default"):
     return result
 
 
-def add_custom_channel(name, channel_type, api_key, base_url, models_str, priority=0, group="default"):
+def add_custom_channel(name, channel_type, api_key, base_url, models_str, priority=10, group="default"):
     """
     直接添加自定义渠道到 One API（不依赖注册表），自动添加 auto-model 映射
     
@@ -404,7 +404,7 @@ def main():
     p_add = sub.add_parser("add", help="将注册表中的渠道添加到 One API")
     p_add.add_argument("--name", required=True, help="注册表中的渠道名称")
     p_add.add_argument("--key", required=True, help="API 密钥")
-    p_add.add_argument("--priority", type=int, default=0)
+    p_add.add_argument("--priority", type=int, default=10)
     p_add.add_argument("--group", default="default")
 
     # add-custom (directly to One API)
@@ -414,7 +414,7 @@ def main():
     p_ac.add_argument("--key", required=True, help="API 密钥")
     p_ac.add_argument("--base-url", required=True, help="API 基础地址")
     p_ac.add_argument("--models", required=True, help="模型列表（逗号分隔）")
-    p_ac.add_argument("--priority", type=int, default=0)
+    p_ac.add_argument("--priority", type=int, default=10)
     p_ac.add_argument("--group", default="default")
 
     # list (One API channels)
