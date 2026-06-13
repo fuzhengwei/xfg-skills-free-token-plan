@@ -76,6 +76,21 @@ def get_bearer_header():
     return {}, cookie
 
 
+def _relogin():
+    """使用保存的凭据自动重新登录，刷新 session_cookie 和 access_token"""
+    config = load_config()
+    if not config or not config.get("username") or not config.get("password"):
+        return False
+    try:
+        login_result = login(config["username"], config["password"])
+        if not login_result.get("success"):
+            return False
+        get_access_token()
+        return True
+    except Exception:
+        return False
+
+
 def _request(method, path, data=None, headers=None, timeout=DEFAULT_TIMEOUT, retries=MAX_RETRIES):
     """
     统一 HTTP 请求封装
@@ -113,6 +128,7 @@ def _request(method, path, data=None, headers=None, timeout=DEFAULT_TIMEOUT, ret
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
 
     last_error = None
+    relogin_attempted = False
     for attempt in range(retries + 1):
         try:
             req = urllib.request.Request(url, data=body, headers=req_headers, method=method)
@@ -127,8 +143,16 @@ def _request(method, path, data=None, headers=None, timeout=DEFAULT_TIMEOUT, ret
                 pass
             last_error = f"HTTP {e.code}: {error_body}"
             if e.code in (401, 403):
-                # 认证失败，不重试
-                return {"success": False, "message": f"认证失败: {last_error}"}
+                # 认证失败，尝试自动重新登录（仅一次）
+                if not relogin_attempted and _relogin():
+                    relogin_attempted = True
+                    # 刷新请求头中的认证信息
+                    auth_headers, cookie = get_auth_header()
+                    req_headers.update(auth_headers)
+                    if cookie:
+                        req_headers["Cookie"] = cookie
+                    continue
+                return {"success": False, "message": f"认证失败（自动重登无效）: {last_error}"}
         except urllib.error.URLError as e:
             last_error = f"连接失败: {e.reason}"
         except Exception as e:
