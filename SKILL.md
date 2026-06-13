@@ -96,7 +96,7 @@ docker run --name one-api -d --restart always \
   registry.cn-hangzhou.aliyuncs.com/xfg-studio/one-api:v0.6.10
 ```
 
-部署后在 Web 面板 `http://你的IP:4000` 用 root/123456 登录。
+部署后在 Web 面板 `http://你的IP:4000` 用 root/12345678 登录。
 
 ### 连接已有服务
 
@@ -213,7 +213,7 @@ python3 scripts/auto_model.py list
 2. **API Key 创建后仅返回一次**，必须及时保存
 3. **auto-model 映射在添加渠道时自动创建**，手动修改渠道后需重新同步
 4. **渠道验证由用户手动触发**（检查渠道/测试渠道/验证渠道），不可用自动降级，可用自动恢复
-5. **One API 默认 root 密码 123456**，生产环境务必修改
+5. **One API 默认 root 密码 12345678**，生产环境务必修改
 6. **统一优先级10负载均衡**：所有渠道默认优先级10，不可用降级为1，验证可用后恢复为10
 7. **检查历史持久化**：`data/health_history.json` 记录降级状态，重启后仍可恢复
 8. **手动禁用(状态2)的渠道不会被检测或修改**，仅降级的渠道参与恢复

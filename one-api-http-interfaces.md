@@ -71,7 +71,7 @@
 ### POST /api/user/login
 **请求体**:
 ```json
-{ "username": "root", "password": "123456" }
+{ "username": "root", "password": "12345678" }
 ```
 **响应**:
 ```json
